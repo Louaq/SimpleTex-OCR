@@ -20,3 +20,28 @@
 
 复制Latex代码可以选择三种不同的格式
 
+
+
+开发步骤：
+
+1. ```
+   git clone https://github.com/Louaq/SimpleTex-OCR 
+   ```
+
+2. cd SimpleTex-OCR
+
+3. ```
+   pip install PyQt5
+   pip install Pillow
+   pip install keyboard
+   pip install mouse 
+   ```
+
+   
+
+打包：
+
+```
+pyinstaller --clean --windowed --name "LaTeX公式识别工具" main.py
+```
+
