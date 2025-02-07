@@ -109,6 +109,8 @@ class AboutDialog(QDialog):
         self.setFixedSize(400, 300)  # 固定对话框大小
         
         layout = QVBoxLayout(self)
+        layout.setSpacing(10)  # 设置组件之间的间距
+        layout.setContentsMargins(20, 20, 20, 20)  # 设置边距
         
         # 软件名称
         title_label = QLabel('LaTeX公式识别工具')
@@ -117,7 +119,6 @@ class AboutDialog(QDialog):
                 font-size: 16pt;
                 font-weight: bold;
                 color: #333;
-                margin: 10px 0;
             }
         """)
         title_label.setAlignment(Qt.AlignCenter)
@@ -125,9 +126,10 @@ class AboutDialog(QDialog):
         # 版本信息
         version_label = QLabel('版本 1.0.0')
         version_label.setAlignment(Qt.AlignCenter)
+        version_label.setStyleSheet("margin-bottom: 20px;")
         
         # 描述信息
-        desc_label = QLabel(
+        desc_text = (
             '这是一个简单的LaTeX公式识别工具，支持以下功能：\n\n'
             '• 截图识别公式\n'
             '• 上传图片识别\n'
@@ -138,34 +140,42 @@ class AboutDialog(QDialog):
             '\n'
             '© 2024 All Rights Reserved'
         )
-        desc_label.setWordWrap(True)  # 允许文字换行
-        desc_label.setAlignment(Qt.AlignLeft)
-        desc_label.setStyleSheet('padding: 20px;')
         
-        # 添加到布局
-        layout.addWidget(title_label)
-        layout.addWidget(version_label)
-        layout.addWidget(desc_label)
-        layout.addStretch()
+        desc_label = QLabel(desc_text)
+        desc_label.setWordWrap(True)  # 允许文字换行
+        desc_label.setMinimumHeight(180)  # 设置最小高度确保显示完整
+        desc_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)  # 文字顶部对齐
+        desc_label.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei";
+                font-size: 10pt;
+                color: #444;
+                background-color: white;
+                padding: 10px;
+                border-radius: 5px;
+            }
+        """)
         
         # 确定按钮
         button_box = QDialogButtonBox(QDialogButtonBox.Ok)
         button_box.accepted.connect(self.accept)
+        button_box.setStyleSheet("""
+            QPushButton {
+                min-width: 80px;
+                padding: 5px 15px;
+            }
+        """)
+        
+        # 添加到布局
+        layout.addWidget(title_label)
+        layout.addWidget(version_label)
+        layout.addWidget(desc_label, 1)  # 添加拉伸因子
         layout.addWidget(button_box)
         
         # 设置对话框样式
         self.setStyleSheet("""
             QDialog {
-                background-color: white;
-            }
-            QLabel {
-                font-family: "Microsoft YaHei";
-                font-size: 10pt;
-                color: #444;
-            }
-            QPushButton {
-                padding: 5px 15px;
-                min-width: 80px;
+                background-color: #f5f5f5;
             }
         """)
 
@@ -203,6 +213,102 @@ class RecognizeThread(QThread):
                 
         except Exception as e:
             self.finished.emit({"error": str(e)})
+
+class HistoryDialog(QDialog):
+    def __init__(self, history_items, parent=None):
+        super().__init__(parent)
+        self.history_items = history_items
+        self.selected_latex = None
+        self.initUI()
+        
+    def initUI(self):
+        self.setWindowTitle('历史记录')
+        self.setFixedSize(500, 400)
+        
+        layout = QVBoxLayout(self)
+        layout.setSpacing(10)
+        layout.setContentsMargins(20, 20, 20, 20)
+        
+        # 标题
+        title_label = QLabel('最近识别记录')
+        title_label.setStyleSheet("""
+            QLabel {
+                font-size: 14pt;
+                font-weight: bold;
+                color: #333;
+                margin-bottom: 10px;
+            }
+        """)
+        title_label.setAlignment(Qt.AlignCenter)
+        
+        # 历史记录列表
+        self.history_list = QTextEdit()
+        self.history_list.setReadOnly(True)
+        self.history_list.setStyleSheet("""
+            QTextEdit {
+                font-family: "Microsoft YaHei";
+                font-size: 10pt;
+                padding: 10px;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+                background-color: white;
+            }
+        """)
+        
+        # 显示历史记录
+        history_text = ""
+        for item in self.history_items:
+            date = item['date']
+            latex = item['latex']
+            history_text += f"[{date}]\n{latex}\n\n"
+        
+        self.history_list.setText(history_text)
+        
+        # 按钮布局
+        button_layout = QHBoxLayout()
+        
+        # 清空按钮
+        clear_btn = QPushButton("清空记录")
+        clear_btn.clicked.connect(self.clear_history)
+        clear_btn.setStyleSheet("""
+            QPushButton {
+                min-width: 80px;
+                padding: 5px 15px;
+            }
+        """)
+        
+        # 关闭按钮
+        close_btn = QPushButton("关闭")
+        close_btn.clicked.connect(self.reject)
+        close_btn.setStyleSheet("""
+            QPushButton {
+                min-width: 80px;
+                padding: 5px 15px;
+            }
+        """)
+        
+        button_layout.addWidget(clear_btn)
+        button_layout.addStretch()
+        button_layout.addWidget(close_btn)
+        
+        # 添加到主布局
+        layout.addWidget(title_label)
+        layout.addWidget(self.history_list)
+        layout.addLayout(button_layout)
+        
+        # 设置对话框样式
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #f5f5f5;
+            }
+        """)
+    
+    def clear_history(self):
+        """清空历史记录"""
+        self.history_items.clear()
+        self.history_list.clear()
+        if hasattr(self.parent(), 'save_history'):
+            self.parent().save_history()
 
 class ScreenshotWindow(QMainWindow):
     def __init__(self):
@@ -255,7 +361,8 @@ class ScreenshotWindow(QMainWindow):
         
         # 添加历史记录菜单
         historyMenu = menubar.addMenu('历史记录')
-        self.update_history_menu(historyMenu)
+        historyAction = historyMenu.addAction('查看历史记录')
+        historyAction.triggered.connect(self.show_history_dialog)
         
         # 添加关于菜单
         helpMenu = menubar.addMenu('帮助')
@@ -265,17 +372,9 @@ class ScreenshotWindow(QMainWindow):
         # 创建中心部件
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-        layout = QVBoxLayout(central_widget)  # 改为垂直布局
-        
-        # 创建分割器
-        splitter = QSplitter(Qt.Vertical)  # 改为垂直分割
-        layout.addWidget(splitter)
+        layout = QVBoxLayout(central_widget)  # 使用垂直布局
         
         # 上方图片显示区域
-        top_widget = QWidget()
-        top_layout = QVBoxLayout(top_widget)
-        
-        # 图片标签
         image_label = QLabel("识别图片：")
         self.image_display = QLabel()
         self.image_display.setStyleSheet("""
@@ -288,13 +387,7 @@ class ScreenshotWindow(QMainWindow):
         """)
         self.image_display.setAlignment(Qt.AlignCenter)
         
-        top_layout.addWidget(image_label)
-        top_layout.addWidget(self.image_display)
-        
         # 下方LaTeX代码区域
-        bottom_widget = QWidget()
-        bottom_layout = QVBoxLayout(bottom_widget)
-        
         latex_label = QLabel("LaTeX代码：")
         self.latex_text = QTextEdit()
         self.latex_text.setReadOnly(False)
@@ -313,11 +406,9 @@ class ScreenshotWindow(QMainWindow):
             }
         """)
         
-        # 复制按钮布局
+        # 复制按钮
         button_layout = QHBoxLayout()
-        
-        # 创建复制按钮和菜单
-        self.copy_btn = QPushButton("复制Latex")
+        self.copy_btn = QPushButton("复制")
         copy_menu = QMenu(self)
         
         # 添加复制选项
@@ -332,7 +423,7 @@ class ScreenshotWindow(QMainWindow):
         
         # 设置默认动作和菜单
         self.copy_btn.setMenu(copy_menu)
-        self.copy_btn.clicked.connect(lambda: self.copy_latex('normal'))  # 点击按钮时的默认动作
+        self.copy_btn.clicked.connect(lambda: self.copy_latex('normal'))
         
         button_layout.addStretch()
         button_layout.addWidget(self.copy_btn)
@@ -345,18 +436,14 @@ class ScreenshotWindow(QMainWindow):
                 padding: 5px;
             }
         """)
-        bottom_layout.addWidget(self.status_label)
         
-        bottom_layout.addWidget(latex_label)
-        bottom_layout.addWidget(self.latex_text)
-        bottom_layout.addLayout(button_layout)
-        
-        # 添加到分割器
-        splitter.addWidget(top_widget)
-        splitter.addWidget(bottom_widget)
-        
-        # 设置分割器初始大小
-        splitter.setSizes([300, 300])  # 调整上下区域的初始大小比例
+        # 将所有组件添加到主布局
+        layout.addWidget(image_label)
+        layout.addWidget(self.image_display)
+        layout.addWidget(latex_label)
+        layout.addWidget(self.latex_text)
+        layout.addLayout(button_layout)
+        layout.addWidget(self.status_label)
         
         # 设置快捷键
         shortcut = QShortcut(QKeySequence("Alt+C"), self)
@@ -594,6 +681,11 @@ class ScreenshotWindow(QMainWindow):
         except Exception as e:
             print(f"清理历史记录失败: {e}")
             event.accept()  # 即使清理失败也允许关闭
+
+    def show_history_dialog(self):
+        """显示历史记录对话框"""
+        dialog = HistoryDialog(self.history, self)
+        dialog.exec_()
 
 class OverlayWidget(QWidget):
     def __init__(self, parent=None):
